@@ -5,13 +5,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.http import HttpResponse
 from .models import User
-from .forms import SignUpForm, LoginForm
+from .forms import SignUpForm, LoginForm, CompleteProfileForm
 
 
 class SignUpView(FormView):
     template_name = 'users/signup.html'
     form_class = SignUpForm
-    success_url = reverse_lazy('home')
+    success_url = reverse_lazy('complete_profile')
 
     def form_valid(self, form):
         user = form.save()
@@ -22,6 +22,36 @@ class SignUpView(FormView):
         context = super().get_context_data(**kwargs)
         context['title'] = 'ثبت‌نام'
         return context
+
+
+class CompleteProfileView(LoginRequiredMixin, FormView):
+    template_name = 'users/complete_profile.html'
+    form_class = CompleteProfileForm
+    success_url = reverse_lazy('home')
+    login_url = 'login'
+
+    def get_object(self):
+        return self.request.user
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['instance'] = self.get_object()
+        return kwargs
+
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'تکمیل پروفایل'
+        return context
+
+    def get(self, request, *args, **kwargs):
+        # اگر پروفایل قبلاً تکمیل شده بود، به home برو
+        if request.user.profile_completed:
+            return redirect('home')
+        return super().get(request, *args, **kwargs)
 
 
 class LoginView(FormView):
@@ -55,6 +85,10 @@ class HomeView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         try:
             user = request.user
+
+            # اگر دانش‌اموز است و پروفایل تکمیل نشده باشد
+            if user.user_type == 'student' and not user.profile_completed:
+                return redirect('complete_profile')
 
             if user.user_type == 'student':
                 return redirect('student_home')
@@ -96,6 +130,8 @@ class StudentHomeView(LoginRequiredMixin, TemplateView):
     def get(self, request, *args, **kwargs):
         if request.user.user_type != 'student':
             return redirect('home')
+        if not request.user.profile_completed:
+            return redirect('complete_profile')
         return super().get(request, *args, **kwargs)
 
 
