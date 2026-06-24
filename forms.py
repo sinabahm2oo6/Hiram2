@@ -45,7 +45,7 @@ class SignUpForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password'])
-        user.is_active = False
+        user.is_active = True
         user.user_type = 'student'
 
         if commit:
