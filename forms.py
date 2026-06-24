@@ -78,7 +78,15 @@ class LoginForm(forms.Form):
         if username and password:
             self.user = authenticate(username=username, password=password)
             if self.user is None:
-                raise forms.ValidationError('نام کاربری یا رمز عبور نادرست است!')
+                # بررسی کن آیا کاربر وجود دارد ولی غیرفعال است
+                try:
+                    user = User.objects.get(username=username)
+                    if not user.is_active:
+                        raise forms.ValidationError('اکانت شما هنوز فعال نشده است!')
+                    else:
+                        raise forms.ValidationError('نام کاربری یا رمز عبور نادرست است!')
+                except User.DoesNotExist:
+                    raise forms.ValidationError('نام کاربری یا رمز عبور نادرست است!')
 
         return cleaned_data
 
