@@ -3,6 +3,7 @@ from django.views.generic import FormView, TemplateView, View
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
+from django.http import HttpResponse
 from .models import User
 from .forms import SignUpForm, LoginForm
 
@@ -30,7 +31,8 @@ class LoginView(FormView):
 
     def form_valid(self, form):
         user = form.get_user()
-        login(self.request, user)
+        if user is not None:
+            login(self.request, user)
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -51,19 +53,25 @@ class HomeView(LoginRequiredMixin, View):
     login_url = 'login'
 
     def get(self, request, *args, **kwargs):
-        user = request.user
+        try:
+            user = request.user
 
-        if user.user_type == 'student':
-            return redirect('student_home')
+            if user.user_type == 'student':
+                return redirect('student_home')
 
-        elif user.user_type == 'admin':
-            return redirect('admin_home')
+            elif user.user_type == 'admin':
+                return redirect('admin_home')
 
-        elif user.user_type == 'advisor':
-            return redirect('advisor_home')
+            elif user.user_type == 'advisor':
+                return redirect('advisor_home')
 
-        elif user.is_superuser:
-            return redirect('admin_home')
+            elif user.is_superuser:
+                return redirect('admin_home')
+            else:
+                # اگر user_type تنظیم نشده باشد
+                return HttpResponse('خطا: نقش کاربر تنظیم نشده است', status=400)
+        except Exception as e:
+            return HttpResponse(f'خطا: {str(e)}', status=500)
 
 
 class StudentHomeView(LoginRequiredMixin, TemplateView):
