@@ -47,6 +47,7 @@ class SignUpForm(forms.ModelForm):
         user.set_password(self.cleaned_data['password'])
         user.is_active = True
         user.user_type = 'student'
+        user.profile_completed = False
 
         if commit:
             user.save()
@@ -92,3 +93,76 @@ class LoginForm(forms.Form):
 
     def get_user(self):
         return getattr(self, 'user', None)
+
+
+class CompleteProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'phone_number', 'grade', 'field']
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'نام',
+                'required': True
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'نام خانوادگی',
+                'required': True
+            }),
+            'phone_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '09xxxxxxxxx',
+                'pattern': '[0-9]{11}',
+                'required': True
+            }),
+            'grade': forms.Select(attrs={
+                'class': 'form-control',
+                'required': True
+            }),
+            'field': forms.Select(attrs={
+                'class': 'form-control',
+                'required': True
+            }),
+        }
+
+    def clean_first_name(self):
+        first_name = self.cleaned_data.get('first_name')
+        if not first_name or first_name.strip() == '':
+            raise forms.ValidationError('نام الزامی است!')
+        return first_name
+
+    def clean_last_name(self):
+        last_name = self.cleaned_data.get('last_name')
+        if not last_name or last_name.strip() == '':
+            raise forms.ValidationError('نام خانوادگی الزامی است!')
+        return last_name
+
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data.get('phone_number')
+        if not phone_number or phone_number.strip() == '':
+            raise forms.ValidationError('شماره همراه الزامی است!')
+        if len(phone_number) != 11 or not phone_number.isdigit():
+            raise forms.ValidationError('شماره همراه باید 11 رقم باشد!')
+        if not phone_number.startswith('09'):
+            raise forms.ValidationError('شماره همراه باید با 09 شروع شود!')
+        return phone_number
+
+    def clean_grade(self):
+        grade = self.cleaned_data.get('grade')
+        if not grade:
+            raise forms.ValidationError('پایه الزامی است!')
+        return grade
+
+    def clean_field(self):
+        field = self.cleaned_data.get('field')
+        if not field:
+            raise forms.ValidationError('رشته الزامی است!')
+        return field
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.profile_completed = True
+        if commit:
+            user.save()
+        return user
